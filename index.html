@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nelson — Finance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#0a0a0b; --surface:#111113; --surface2:#18181c; --surface3:#1e1e24;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+  --text:#f0efe8; --muted:#6b6a65; --muted2:#8f8e88;
+  --accent:#c8f564; --red:#ff5a5a; --amber:#f5a623; --blue:#5b9cf6; --teal:#2dd4b0;
+  --mono:'DM Mono',monospace; --sans:'Syne',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--border);background:var(--surface);}
+.tl{display:flex;align-items:center;gap:16px;}
+.logo{font-size:13px;font-weight:700;letter-spacing:0.12em;color:var(--accent);text-transform:uppercase;}
+.sep{width:1px;height:18px;background:var(--border2);}
+.ptitle{font-size:13px;color:var(--muted2);}
+.tr{display:flex;align-items:center;gap:10px;}
+.sync-btn{background:var(--surface3);border:1px solid var(--border2);color:var(--muted2);padding:7px 16px;border-radius:8px;font-size:12px;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;}
+.sync-btn:hover{border-color:var(--accent);color:var(--accent);}
+.sync-btn.loading{opacity:.5;pointer-events:none;}
+.last-upd{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;}
+.status-dot.ok{background:var(--accent);}
+.status-dot.err{background:var(--red);}
+
+/* MAIN */
+.main{padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
+
+/* STMT SELECTOR */
+.stmt-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.slabel{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-right:4px;}
+.sbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted2);padding:6px 16px;border-radius:20px;font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .15s;}
+.sbtn:hover{border-color:var(--border2);color:var(--text);}
+.sbtn.active{background:var(--accent);color:#0a0a0b;border-color:var(--accent);font-weight:600;}
+
+/* QUICK INPUT */
+.qrow{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 24px;display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;}
+.qg{display:flex;flex-direction:column;gap:5px;}
+.qg label{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;}
+.qg input{background:var(--surface3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:14px;padding:8px 12px;width:160px;outline:none;transition:border .15s;}
+.qg input:focus{border-color:var(--accent);}
+.qg input[readonly]{opacity:.5;cursor:default;}
+.qdiv{width:1px;height:36px;background:var(--border);}
+.qbtn{background:var(--accent);color:#0a0a0b;border:none;border-radius:8px;padding:10px 20px;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s;}
+.qbtn:hover{opacity:.85;}
+
+/* HERO */
+.hero{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:14px;}
+.hmain{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;display:flex;flex-direction:column;justify-content:space-between;min-height:155px;}
+.hlabel{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;}
+.hamount{font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1;margin:10px 0 6px;}
+.hamount.pos{color:var(--accent);}
+.hamount.neg{color:var(--red);}
+.hamount.neutral{color:var(--text);}
+.hsub{font-size:12px;color:var(--muted2);}
+.ptrack{height:3px;background:var(--surface3);border-radius:2px;margin-top:14px;overflow:hidden;}
+.pbar{height:100%;border-radius:2px;transition:width .6s ease;}
+.pbar.ok{background:var(--accent);}
+.pbar.warn{background:var(--amber);}
+.pbar.over{background:var(--red);}
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;}
+.mlabel{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;}
+.mval{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:8px 0 3px;}
+.mval.pos{color:var(--accent);}
+.mval.neg{color:var(--red);}
+.mval.neutral{color:var(--text);}
+.mval.amber{color:var(--amber);}
+.msub{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-family:var(--mono);font-weight:500;margin-top:5px;}
+.badge.g{background:rgba(200,245,100,.12);color:var(--accent);}
+.badge.r{background:rgba(255,90,90,.12);color:var(--red);}
+.badge.a{background:rgba(245,166,35,.12);color:var(--amber);}
+
+/* MIDDLE */
+.mid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;}
+.ctitle{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:18px;}
+.cw{position:relative;height:200px;}
+
+/* CATS */
+.catlist{display:flex;flex-direction:column;gap:11px;}
+.catrow{display:flex;flex-direction:column;gap:3px;}
+.cath{display:flex;justify-content:space-between;align-items:baseline;}
+.catn{font-size:13px;color:var(--text);}
+.cata{font-size:12px;font-family:var(--mono);color:var(--muted2);}
+.cattrack{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;}
+.catfill{height:100%;border-radius:2px;transition:width .5s ease;}
+
+/* BOTTOM */
+.bot{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.htable{width:100%;border-collapse:collapse;font-size:13px;}
+.htable th{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:0 0 10px;border-bottom:1px solid var(--border);}
+.htable th:not(:first-child){text-align:right;}
+.htable td{padding:9px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+.htable td:not(:first-child){text-align:right;font-family:var(--mono);font-size:12px;}
+.htable tr:last-child td{border-bottom:none;}
+.sname{font-size:13px;color:var(--text);}
+.sper{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-family:var(--mono);}
+.pill.p{background:rgba(200,245,100,.1);color:var(--accent);}
+.pill.n{background:rgba(255,90,90,.1);color:var(--red);}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:100;}
+.loading-screen.hidden{display:none;}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--muted);font-family:var(--mono);}
+
+.footer{font-size:11px;color:var(--muted);font-family:var(--mono);text-align:center;padding:16px 0 28px;border-top:1px solid var(--border);margin-top:8px;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Fetching data from Google Sheets...</div>
+</div>
+
+<div class="topbar">
+  <div class="tl">
+    <span class="logo">Nelson</span>
+    <div class="sep"></div>
+    <span class="ptitle">Personal Finance Dashboard</span>
+  </div>
+  <div class="tr">
+    <span class="last-upd"><span class="status-dot" id="dot"></span><span id="lastUpd">Loading...</span></span>
+    <button class="sync-btn" id="syncBtn" onclick="loadData()">↺ Sync Sheet</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- STMT SELECTOR -->
+  <div class="stmt-row">
+    <span class="slabel">Statement</span>
+    <button class="sbtn active" onclick="selStmt(this,'jan')" data-s="jan">Jan 2026</button>
+    <button class="sbtn" onclick="selStmt(this,'feb')" data-s="feb">Feb 2026</button>
+    <button class="sbtn" onclick="selStmt(this,'mar')" data-s="mar">Mar 2026</button>
+    <button class="sbtn" onclick="selStmt(this,'apr')" data-s="apr">Apr 2026</button>
+    <button class="sbtn" onclick="selStmt(this,'may')" data-s="may">May 2026</button>
+  </div>
+
+  <!-- QUICK INPUT -->
+  <div class="qrow">
+    <div class="qg">
+      <label>This month's income (HKD)</label>
+      <input type="number" id="qi-income" placeholder="e.g. 68000" oninput="quickCalc()">
+    </div>
+    <div class="qg">
+      <label>Savings target (HKD)</label>
+      <input type="number" id="qi-target" value="30000" oninput="quickCalc()">
+    </div>
+    <div class="qdiv"></div>
+    <div class="qg">
+      <label>Spendable budget</label>
+      <input type="number" id="qi-budget" readonly>
+    </div>
+    <div class="qg">
+      <label>Actual spending (from sheet)</label>
+      <input type="number" id="qi-spent" placeholder="auto-filled" oninput="quickCalc()">
+    </div>
+    <button class="qbtn" onclick="quickCalc()">Calculate →</button>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hmain">
+      <div class="hlabel">Remaining Spendable Budget</div>
+      <div class="hamount neutral" id="hRemain">—</div>
+      <div class="hsub" id="hSub">Select a statement period above</div>
+      <div class="ptrack"><div class="pbar ok" id="hProg" style="width:0%"></div></div>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">Total Income</div>
+      <div class="mval neutral" id="mIncome">HK$60,000</div>
+      <div class="msub">Fixed salary</div>
+      <span class="badge a" id="mIncBadge">Base salary</span>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">Actual Spending</div>
+      <div class="mval neutral" id="mSpent">—</div>
+      <div class="msub" id="mSpentSub">From Google Sheet</div>
+    </div>
+    <div class="mcard">
+      <div class="mlabel">Net Savings</div>
+      <div class="mval neutral" id="mSavings">—</div>
+      <div class="msub">Target: HK$30,000</div>
+      <span class="badge a" id="mSavBadge">—</span>
+    </div>
+  </div>
+
+  <!-- MIDDLE -->
+  <div class="mid">
+    <div class="card">
+      <div class="ctitle">Spending Trend — All Statements</div>
+      <div class="cw"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Category Breakdown — <span id="catTitle">Jan 2026</span></div>
+      <div class="catlist" id="catList"><div style="color:var(--muted);font-size:12px;font-family:var(--mono);">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM -->
+  <div class="bot">
+    <div class="card">
+      <div class="ctitle">Statement History</div>
+      <table class="htable">
+        <thead><tr><th>Period</th><th>Spending</th><th>Savings</th><th>Rate</th><th>vs Target</th></tr></thead>
+        <tbody id="histBody"><tr><td colspan="5" style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:14px 0;">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="ctitle">Income Allocation</div>
+      <div class="cw"><canvas id="allocChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="footer">HSBC EveryMile · Auto-syncs from Google Sheets · HKD · Nelson Choi</div>
+</div>
+
+<script>
+const CSV_MONTHLY = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJcTnIvIMHu9GTPEFldxcqui1T8zCt3jTAeRvyySIwhMWPzq1JPXNUXtJs8LWs2XINWgF3PenDH8bS/pub?gid=1737164912&single=true&output=csv';
+const CSV_BUDGET  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJcTnIvIMHu9GTPEFldxcqui1T8zCt3jTAeRvyySIwhMWPzq1JPXNUXtJs8LWs2XINWgF3PenDH8bS/pub?gid=215226037&single=true&output=csv';
+
+const SALARY = 60000;
+const TARGET = 30000;
+const STMTS  = ['jan','feb','mar','apr','may'];
+const SLABELS = ['Jan 2026','Feb 2026','Mar 2026','Apr 2026','May 2026'];
+const SPERIODS = ['20 Dec–19 Jan','20 Jan–20 Feb','21 Feb–19 Mar','20 Mar–20 Apr','21 Apr–21 May'];
+
+const CAT_COLORS = {
+  'Food':'#c8f564','Travel':'#5b9cf6','Transport':'#2dd4b0',
+  'Shopping':'#f5a623','Entertainment':'#d87bff','Subscriptions':'#ff7eb3',
+  'Daily':'#8f8e88','Insurance':'#ff5a5a'
+};
+
+let DATA = {
+  spending: {jan:0,feb:0,mar:0,apr:0,may:0},
+  cats: {jan:{},feb:{},mar:{},apr:{},may:{}},
+  savings: {jan:0,feb:0,mar:0,apr:0,may:0},
+  rates: {jan:'',feb:'',mar:'',apr:'',may:''},
+};
+let currentStmt = 'jan';
+let tChart = null, aChart = null;
+
+function fmt(n){
+  if(n===null||n===undefined||isNaN(n))return '—';
+  const abs = Math.abs(Math.round(n));
+  return (n<0?'-':'')+'HK$'+abs.toLocaleString();
+}
+
+function parseCSV(text){
+  return text.trim().split('\n').map(r=>{
+    const cols = []; let cur='', inQ=false;
+    for(let i=0;i<r.length;i++){
+      if(r[i]==='"'){inQ=!inQ;}
+      else if(r[i]===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=r[i];
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+}
+
+async function loadData(){
+  const btn = document.getElementById('syncBtn');
+  const dot = document.getElementById('dot');
+  const upd = document.getElementById('lastUpd');
+  btn.classList.add('loading');
+  btn.textContent = '↺ Syncing...';
+  dot.className = 'status-dot';
+
+  try {
+    const [mRes] = await Promise.all([
+      fetch(CSV_MONTHLY)
+    ]);
+    const mText = await mRes.text();
+    const rows = parseCSV(mText);
+
+    // Row structure from sheet screenshot:
+    // Row 0: "SPENDING BY STATEMENT PERIOD"
+    // Row 1: "", "Jan 2026", "Feb 2026", "Mar 2026", "Apr 2026", "May 2026", ...
+    // Row 2: "Statement Period", "20Dec–19Jan", ...
+    // Row 3: 餐飲 (Food...)
+    // Row 4: 旅行住宿 (Travel...)
+    // Row 5: 交通 (Transport)
+    // Row 6: 購物 (Shopping)
+    // Row 7: 娛樂 (Entertainment)
+    // Row 8: 訂閱 (Subscriptions)
+    // Row 9: 日常雜費 (Daily)
+    // Row 10: 保險 (Insurance)
+    // Row 11: TOTAL SPENDING
+    // Row 12: NET SAVINGS
+    // Row 13: Savings Rate
+
+    const catNames = ['Food','Travel','Transport','Shopping','Entertainment','Subscriptions','Daily','Insurance'];
+    const catStart = 3;
+
+    STMTS.forEach((s,i)=>{
+      const col = i+1;
+      DATA.spending[s] = parseFloat((rows[11]||[])[col])||0;
+      DATA.savings[s]  = parseFloat((rows[12]||[])[col])||0;
+      DATA.rates[s]    = (rows[13]||[])[col]||'';
+      DATA.cats[s] = {};
+      catNames.forEach((cat,ci)=>{
+        const val = parseFloat((rows[catStart+ci]||[])[col])||0;
+        if(val>0) DATA.cats[s][cat] = val;
+      });
+    });
+
+    dot.className = 'status-dot ok';
+    upd.textContent = 'Synced '+new Date().toLocaleTimeString('en-HK',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('loadingScreen').classList.add('hidden');
+    render();
+
+  } catch(e) {
+    dot.className = 'status-dot err';
+    upd.textContent = 'Sync failed — using cached data';
+    document.getElementById('loadingScreen').classList.add('hidden');
+    render();
+  }
+
+  btn.classList.remove('loading');
+  btn.textContent = '↺ Sync Sheet';
+}
+
+function selStmt(btn, s){
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentStmt = s;
+  const idx = STMTS.indexOf(s);
+  document.getElementById('catTitle').textContent = SLABELS[idx];
+  document.getElementById('qi-income').value = SALARY;
+  document.getElementById('qi-spent').value = DATA.spending[s]||'';
+  quickCalc();
+  renderCats();
+}
+
+function quickCalc(){
+  const income  = parseFloat(document.getElementById('qi-income').value)||SALARY;
+  const target  = parseFloat(document.getElementById('qi-target').value)||TARGET;
+  const spent   = parseFloat(document.getElementById('qi-spent').value);
+  const budget  = income - target;
+  document.getElementById('qi-budget').value = Math.round(budget);
+
+  const hR   = document.getElementById('hRemain');
+  const hS   = document.getElementById('hSub');
+  const hP   = document.getElementById('hProg');
+  const mInc = document.getElementById('mIncome');
+  const mSp  = document.getElementById('mSpent');
+  const mSpS = document.getElementById('mSpentSub');
+  const mSav = document.getElementById('mSavings');
+  const mSavB= document.getElementById('mSavBadge');
+  const mIncB= document.getElementById('mIncBadge');
+
+  mInc.textContent = fmt(income);
+  if(income>SALARY){mIncB.textContent='Salary + Extra';mIncB.className='badge g';}
+  else{mIncB.textContent='Base salary';mIncB.className='badge a';}
+
+  if(isNaN(spent)){
+    hR.textContent = fmt(budget);
+    hR.className = 'hamount pos';
+    hS.textContent = 'Budget = Income − Savings Target';
+    hP.style.width = '0%'; hP.className='pbar ok';
+    mSp.textContent='—'; mSav.textContent='—'; mSavB.textContent='—';
+    return;
+  }
+
+  const remaining = budget - spent;
+  const pct = Math.min(120, Math.max(0, Math.round(spent/budget*100)));
+
+  hR.textContent = fmt(remaining);
+  hR.className = 'hamount '+(remaining>=0?'pos':'neg');
+  hS.textContent = remaining>=0
+    ? `${fmt(spent)} spent of ${fmt(budget)} budget · ${pct}% used`
+    : `Over budget by ${fmt(Math.abs(remaining))}`;
+
+  hP.style.width = Math.min(100,pct)+'%';
+  hP.className = 'pbar '+(pct>100?'over':pct>80?'warn':'ok');
+
+  mSp.textContent = fmt(spent);
+  mSp.className = 'mval '+(spent>budget?'neg':'neutral');
+  mSpS.textContent = pct+'% of spendable budget';
+
+  const sav = income - spent;
+  mSav.textContent = fmt(sav);
+  mSav.className = 'mval '+(sav>=TARGET?'pos':sav>=0?'amber':'neg');
+  if(sav>=TARGET){mSavB.textContent='✓ Target met';mSavB.className='badge g';}
+  else if(sav>=0){mSavB.textContent=fmt(TARGET-sav)+' short';mSavB.className='badge a';}
+  else{mSavB.textContent='Deficit';mSavB.className='badge r';}
+}
+
+function renderCats(){
+  const s = currentStmt;
+  const cats = DATA.cats[s]||{};
+  const el = document.getElementById('catList');
+  if(!Object.keys(cats).length){
+    el.innerHTML='<div style="color:var(--muted);font-size:12px;font-family:var(--mono);">No data</div>';
+    return;
+  }
+  const total = Object.values(cats).reduce((a,b)=>a+b,0);
+  const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML = sorted.map(([cat,amt])=>{
+    const pct = total>0?Math.round(amt/total*100):0;
+    const col = CAT_COLORS[cat]||'#8f8e88';
+    return `<div class="catrow">
+      <div class="cath"><span class="catn">${cat}</span><span class="cata">${fmt(amt)} · ${pct}%</span></div>
+      <div class="cattrack"><div class="catfill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTrend(){
+  const spending = STMTS.map(s=>DATA.spending[s]||0);
+  const budgets  = STMTS.map(()=>SALARY-TARGET);
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if(tChart) tChart.destroy();
+  tChart = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:SLABELS,
+      datasets:[
+        {label:'Spending',data:spending,borderColor:'#c8f564',backgroundColor:'rgba(200,245,100,0.07)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#c8f564',fill:true,tension:0.3},
+        {label:'Budget',data:budgets,borderColor:'rgba(255,255,255,0.18)',borderWidth:1.5,borderDash:[4,4],pointRadius:0,fill:false,tension:0.3}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#6b6a65',font:{family:"'DM Mono',monospace",size:11},boxWidth:10,padding:14}},
+        tooltip:{backgroundColor:'#18181c',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0efe8',bodyColor:'#8f8e88',callbacks:{label:c=>' '+fmt(c.raw)}}
+      },
+      scales:{
+        x:{ticks:{color:'#6b6a65',font:{family:"'DM Mono',monospace",size:11}},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#6b6a65',font:{family:"'DM Mono',monospace",size:11},callback:v=>'HK$'+Math.round(v/1000)+'k'},grid:{color:'rgba(255,255,255,0.04)'}}
+      }
+    }
+  });
+}
+
+function renderAlloc(){
+  const budget = SALARY - TARGET;
+  const ctx = document.getElementById('allocChart').getContext('2d');
+  if(aChart) aChart.destroy();
+  aChart = new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['Savings Target','Spendable Budget'],
+      datasets:[{data:[TARGET,Math.max(0,budget)],backgroundColor:['#5b9cf6','#c8f564'],borderColor:'#111113',borderWidth:3,hoverOffset:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{
+        legend:{position:'bottom',labels:{color:'#6b6a65',font:{family:"'DM Mono',monospace",size:11},boxWidth:10,padding:14}},
+        tooltip:{backgroundColor:'#18181c',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:c=>' '+fmt(c.raw)}}
+      }
+    }
+  });
+}
+
+function renderHistory(){
+  const tbody = document.getElementById('histBody');
+  const rows = STMTS.map((s,i)=>{
+    const sp = DATA.spending[s];
+    if(!sp) return '';
+    const sav = SALARY - sp;
+    const diff = sav - TARGET;
+    const rate = DATA.rates[s]||Math.round(Math.max(0,sav/SALARY*100))+'%';
+    return `<tr>
+      <td><div class="sname">${SLABELS[i]}</div><div class="sper">${SPERIODS[i]}</div></td>
+      <td>${fmt(sp)}</td>
+      <td style="color:${sav>=0?'var(--accent)':'var(--red)'}">${fmt(sav)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${rate}</td>
+      <td><span class="pill ${diff>=0?'p':'n'}">${diff>=0?'+':''}${fmt(diff)}</span></td>
+    </tr>`;
+  }).filter(Boolean).join('');
+  tbody.innerHTML = rows||'<tr><td colspan="5" style="color:var(--muted);font-family:var(--mono);font-size:12px;padding:14px 0">No data</td></tr>';
+}
+
+function render(){
+  renderTrend();
+  renderAlloc();
+  renderHistory();
+  renderCats();
+  selStmt(document.querySelector('[data-s="jan"]'),'jan');
+}
+
+window.addEventListener('load', loadData);
+</script>
+</body>
+</html>
